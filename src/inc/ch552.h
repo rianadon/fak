@@ -206,6 +206,7 @@ SBIT(AIN0, P1_ADDR, 1);     // AIN0 for ADC
 SBIT(T2, P1_ADDR, 0);       // external count input
 SBIT(CAP1, P1_ADDR, 0);     // capture1 input for timer2
 SBIT(TIN0, P1_ADDR, 0);     // TIN0 for Touch-Key
+#define P1_MOD_OC_ADDR 0x92 // port 1 output mode address
 SFR(P1_MOD_OC, 0x92);       // port 1 output mode: 0=push-pull, 1=open-drain
 SFR(P1_DIR_PU, 0x93);       // port 1 direction for push-pull or pullup enable for open-drain
                             // Pn_MOD_OC & Pn_DIR_PU: pin input & output configuration for Pn (n=1/3)
@@ -252,6 +253,7 @@ SBIT(PWM2_, P3_ADDR, 1);    // alternate pin for PWM2
 SBIT(TXD, P3_ADDR, 1);      // TXD output for UART0
 SBIT(PWM1_, P3_ADDR, 0);    // alternate pin for PWM1
 SBIT(RXD, P3_ADDR, 0);      // RXD input for UART0
+#define P3_MOD_OC_ADDR 0x96 // port 3 output mode address
 SFR(P3_MOD_OC, 0x96);       // port 3 output mode: 0=push-pull, 1=open-drain
 SFR(P3_DIR_PU, 0x97);       // port 3 direction for push-pull or pullup enable for open-drain
 #define bUDM 0x80           // ReadOnly: pin UDM input

@@ -165,6 +165,21 @@ let Layers =
   std.contract.Sequence [ Array Layer, ValidLength ]
 in
 
+let LEDs = 
+  let HexColor = fun label value =>
+    let pattern = "^#(?:[0-9a-fA-F]{3}){1,2}$" in
+    if std.string.is_match pattern value then
+      value
+    else
+      let msg = "invalid color" in
+      std.contract.blame_with_message msg label
+  in
+  let ValidLength = std.contract.from_predicate (fun leds =>
+    let len = std.array.length leds in len > 0 && len <= MAX_LAYER_COUNT
+  ) in 
+  std.contract.Sequence [ Array HexColor, ValidLength ]
+in 
+
 let ConditionalLayers = std.contract.from_predicate (fun cl => cl
   |> std.record.to_array
   |> std.array.all (fun { field, value } =>
@@ -200,6 +215,7 @@ let VirtualKey = {
 {
   Keymap = {
     layers | Layers,
+    leds | LEDs,
     conditional_layers | ConditionalLayers | default = {},
     virtual_keys | Set VirtualKey | default = [],
     mouse = {

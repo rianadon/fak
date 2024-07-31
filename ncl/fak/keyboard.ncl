@@ -78,6 +78,24 @@ let EncoderDef = fun mcu => {
   } type
 } in
 
+let PinDef = fun mcu => {
+  type | [| 'direct, 'output, |],
+  data | ElementOf mcu.gpios,
+} in
+
+let LedDef = fun mcu => {
+  type | [| 'physical, 'ws2812b, |],
+  data | match {
+    'physical => {
+      pin | PinDef mcu,
+    },
+    'ws2812b => {
+      pin | PinDef mcu,
+      num | BoundedInt 1 128,
+    }
+  } type
+} in
+
 let KeyboardPeripheralSide = {
   mcu | Mcu,
   matrix | Matrix mcu | default = {},
@@ -91,6 +109,7 @@ let KeyboardCentralSide = {
   matrix | Matrix mcu | default = {},
   keys | Set (PhysicalKey mcu matrix),
   encoders | Set (EncoderDef mcu) | default = [],
+  leds | Set (LedDef mcu) | default = [],
   usb_dev | UsbDev,
   debounce_ms | Uint8 | default = DEFAULT_DEBOUNCE_MS,
   split | {
@@ -110,6 +129,10 @@ let MatrixKey = fun col_pin row_pin direction => {
   DirectPinKey = fun pin => {
     type = 'direct,
     data = pin
+  },
+  OutputPin = fun pin => {
+    type = 'output,
+    data = pin,
   },
   ColToRowKey = fun c r => MatrixKey c r 'col_to_row,
   RowToColKey = fun c r => MatrixKey c r 'row_to_col,

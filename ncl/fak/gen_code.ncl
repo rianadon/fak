@@ -37,7 +37,8 @@ let rec codegen = {
     let port_idx = std.to_string (pin % 10) in
     m%"
       #define %{prefix}%{std.to_string i}_PIN %{port_idx}
-      SBIT(%{prefix}%{std.to_string i}, P%{port}_ADDR, %{prefix}%{std.to_string i}_PIN);
+      SBIT(%{prefix}%{std.to_string i},      P%{port}_ADDR,        %{prefix}%{std.to_string i}_PIN);
+      SBIT(%{prefix}%{std.to_string i}_MODE, P%{port}_MOD_OC_ADDR, %{prefix}%{std.to_string i}_PIN);
     "%,
 } in
 
@@ -120,6 +121,15 @@ m%"
   }
 
   %{
+    if ir.defines.NEOPIXEL_ENABLE then
+    m%"
+      #include "neopixel.h"
+    "%
+    else
+      "// (No neopixel defs)"
+  }
+
+  %{
     if std.array.length ir.conditional_layers > 0 then
       m%"
         #include "keymap.h"
@@ -147,6 +157,9 @@ let c_file =
 
   let set_pin = fun high prefix pin_idx =>
     "%{prefix}%{std.to_string pin_idx} = %{if high then "1" else "0"};" in
+
+  let set_pin_mode = fun mode prefix pin_idx =>
+    "%{prefix}%{std.to_string pin_idx}_MODE = %{std.to_string mode};" in
 
   let pin_defs_for = fun pins prefix => pins
     |> util.array.enumerate
@@ -209,6 +222,7 @@ m%"
     ])
     |> util.array.join "\n"
   }
+  %{pin_defs_for (std.array.map (fun { value, .. } => value.data.pin.data) ir.led_defs) "LED"}
 
   void keyboard_init_user() {
   %{
@@ -222,6 +236,26 @@ m%"
       |> std.array.generate (fun i => set_pin true prefix i)
     )
     |> util.array.join "\n"
+  }
+  // LEDs
+  %{
+    let prefix = "LED" in 
+    ir.led_defs
+    |> std.array.map_with_index (fun i { value, .. } => [set_pin_mode 0 prefix i, set_pin false prefix i])
+    |> std.array.flatten
+    |> util.array.join "\n"
+  }
+  %{
+    if ir.defines.NEOPIXEL_ENABLE then
+      m%"
+        // LED test
+        for (uint8_t i = 0; i < NEOPIXEL_COUNT; i++) {
+          neopixel_writeColor(i, 64, 128, 192);
+        }
+        neopixel_update();
+      "%
+    else
+      ""
   }
   }
 

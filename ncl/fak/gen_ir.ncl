@@ -290,6 +290,19 @@ let _central_defines = {
   
   ENCODER_COUNT = encoder_count,
 
+  NEOPIXEL_ENABLE = kb.leds 
+    |> std.array.any (fun led => led.type == 'ws2812b),
+  NEOPIXEL_COUNT  = kb.leds 
+    |> std.array.filter (fun led => led.type == 'ws2812b)
+    |> std.array.map (fun led => led.data.num )
+    |> std.array.fold_right (std.number.max) 0,
+  NEOPIXEL_GRB    = true,
+  NEOPIXEL_PIN    = kb.leds
+    |> util.array.enumerate
+    |> std.array.filter (fun { index, value } => value.type == 'ws2812b && value.data.num == 1)
+    |> std.array.first # TODO: allow more than one neopixel string
+    |> (fun { index, .. } => "_LED%{std.to_string index}"),
+
   USB_NUM_INTERFACES = [true, CONSUMER_KEYS_ENABLE, MOUSE_KEYS_ENABLE]
     |> std.array.filter ((==) true)
     |> std.array.length,
@@ -421,7 +434,10 @@ let _defines = {
     'CH552 => 2,
     'CH559 => 9,
   } kb.mcu.family,
-
+  F_CPU = match {
+    'CH552 => std.to_string 24e6, # 24 MHz
+    'CH559 => std.to_string 24e6, # 24 MHz
+  } kb.mcu.family,
   SPLIT_ENABLE = side != 'self,
   SPLIT_SIDE_CENTRAL = side != 'peripheral,
   SPLIT_SIDE_PERIPHERAL = side == 'peripheral,
@@ -574,6 +590,21 @@ let rec _kscan | Kscan =
           pin_b = data.pin_b,
         }
     ),
+  
+  led_defs = kb.leds
+    |> util.array.enumerate
+#    |> std.array.map_with_index (fun i led => {
+#      index = i,
+#      value = { # Simply the pin number for now.
+#        pin = match { 
+#          'physical => led.data.pin.data,
+#          'ws2812b => led.data.pin.data,
+#        } led.type,
+#        num = led.data.num,
+#      }
+#    }),
+    # Drop chained Neopixel LEDs 
+    |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1)),
 
   macro_steps = if side =='peripheral then [] else _macro_steps,
   macro_step_args = if side =='peripheral then [] else _macro_step_args,
