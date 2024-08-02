@@ -124,6 +124,20 @@ m%"
     if ir.defines.NEOPIXEL_ENABLE then
     m%"
       #include "neopixel.h"
+      #include "keymap.h"
+      %{
+      if layer_count == 0 then
+        std.fail_with "No layers. There must be at least one."
+      else if layer_count == 1 then
+        "__code uint32_t led_map[LED_COUNT] = %{codegen.val.array (std.array.at 0 ir.led_map)};"
+      else
+        "__code uint32_t led_map[LAYER_COUNT][LED_COUNT] = %{codegen.val.array ir.led_map};"
+      }
+
+      __code void (*layer_hooks[])(const fak_layer_state_t) = {
+        %{ if ir.defines.NEOPIXEL_ENABLE then "neopixel_on_layer_state_change," else "" }
+        NULL
+      };
     "%
     else
       "// (No neopixel defs)"
@@ -222,7 +236,11 @@ m%"
     ])
     |> util.array.join "\n"
   }
-  %{pin_defs_for (std.array.map (fun { value, .. } => value.data.pin.data) ir.led_defs) "LED"}
+  %{pin_defs_for (
+    ir.led_defs
+    |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1)) # Drop chained Neopixel LEDs 
+    |> std.array.map (fun { value, .. } => value.data.pin.data)
+    ) "LED"}
 
   void keyboard_init_user() {
   %{
@@ -241,6 +259,8 @@ m%"
   %{
     let prefix = "LED" in 
     ir.led_defs
+    # Drop chained Neopixel LEDs 
+    |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1))
     |> std.array.map_with_index (fun i { value, .. } => [set_pin_mode 0 prefix i, set_pin false prefix i])
     |> std.array.flatten
     |> util.array.join "\n"
@@ -249,10 +269,8 @@ m%"
     if ir.defines.NEOPIXEL_ENABLE then
       m%"
         // LED test
-        for (uint8_t i = 0; i < NEOPIXEL_COUNT; i++) {
-          neopixel_writeColor(i, 64, 128, 192);
-        }
-        neopixel_update();
+        const uint32_t *layer = led_map[get_default_layer_idx()];
+        neopixel_show_layer(layer, LED_COUNT);
       "%
     else
       ""

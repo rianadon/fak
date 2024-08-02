@@ -290,6 +290,7 @@ let _central_defines = {
   
   ENCODER_COUNT = encoder_count,
 
+  LED_COUNT = std.array.length kb.leds,
   NEOPIXEL_ENABLE = kb.leds 
     |> std.array.any (fun led => led.type == 'ws2812b),
   NEOPIXEL_COUNT  = kb.leds 
@@ -592,7 +593,7 @@ let rec _kscan | Kscan =
     ),
   
   led_defs = kb.leds
-    |> util.array.enumerate
+    |> util.array.enumerate,
 #    |> std.array.map_with_index (fun i led => {
 #      index = i,
 #      value = { # Simply the pin number for now.
@@ -603,8 +604,8 @@ let rec _kscan | Kscan =
 #        num = led.data.num,
 #      }
 #    }),
-    # Drop chained Neopixel LEDs 
-    |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1)),
+  
+  led_map = km.leds, # no additional encoding necessary
 
   macro_steps = if side =='peripheral then [] else _macro_steps,
   macro_step_args = if side =='peripheral then [] else _macro_step_args,

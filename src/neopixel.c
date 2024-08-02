@@ -5,10 +5,11 @@
 
 
 #include "neopixel.h"
+#include "keymap.h"
+#include <string.h>
 
 #define NEOPIN PIN_asm(PIN_NEO) // convert PIN_NEO for inline assembly
-__xdata uint8_t neopixel_buffer[3 * NEOPIXEL_COUNT]; // pixel buffer
-__xdata uint8_t *ptr;                      // pixel buffer pointer
+#define min(a,b) ((a) < (b) ? (a) : (b))
 
 // ===================================================================================
 // Protocol Delays
@@ -89,67 +90,70 @@ void neopixel_sendByte(uint8_t data) {
 // ===================================================================================
 // Write Buffer to Pixels
 // ===================================================================================
-void neopixel_update(void) {
-  uint8_t i;
-  ptr = neopixel_buffer;
+void neopixel_update(const uint8_t *buffer, const size_t len) {
   EA = 0;
-  for (i = 3 * NEOPIXEL_COUNT; i; i--)
-    neopixel_sendByte(*ptr++);
+  for(size_t i = 0; i < len; ++i) {
+    neopixel_sendByte(buffer[i]);
+  }
   EA = 1;
 }
 
-// ===================================================================================
-// Clear all Pixels
-// ===================================================================================
-void neopixel_clearAll(void) {
-  uint8_t i;
-  ptr = neopixel_buffer;
-  for (i = 3 * NEOPIXEL_COUNT; i; i--)
-    *ptr++ = 0;
-  neopixel_update();
-}
-
-// ===================================================================================
-// Write Color to a Single Pixel in Buffer
-// ===================================================================================
-void neopixel_writeColor(uint8_t pixel, uint8_t r, uint8_t g, uint8_t b) {
-  ptr = neopixel_buffer + (3 * pixel);
-#if defined(NEOPIXEL_GRB)
-  *ptr++ = g;
-  *ptr++ = r;
-  *ptr = b;
-#elif defined(NEOPIXEL_RGB)
-  *ptr++ = r;
-  *ptr++ = g;
-  *ptr = b;
-#else
-#error Wrong or missing NeoPixel type definition!
-#endif
-}
-
-// ===================================================================================
-// Write Hue Value (0..191) and Brightness (0..2) to a Single Pixel in Buffer
-// ===================================================================================
-void neopixel_writeHue(uint8_t pixel, uint8_t hue, uint8_t bright) {
-  uint8_t phase = hue >> 6;
-  uint8_t step = (hue & 63) << bright;
-  uint8_t nstep = (63 << bright) - step;
-  switch (phase) {
-  case 0:
-    neopixel_writeColor(pixel, nstep, step, 0);
-    break;
-  case 1:
-    neopixel_writeColor(pixel, 0, nstep, step);
-    break;
-  case 2:
-    neopixel_writeColor(pixel, step, 0, nstep);
-    break;
-  default:
-    break;
+void neopixel_show_layer(const uint32_t *colormap, const size_t len) {
+  EA = 0;
+  for(size_t i = 0; i < len; ++i) {
+    #ifdef NEOPIXEL_GRB
+    neopixel_sendByte((colormap[i] >>  8) & 0xFF);
+    neopixel_sendByte((colormap[i] >> 16) & 0xFF);
+    neopixel_sendByte((colormap[i] >>  0) & 0xFF);
+    #elif  NEOPIXEL_RGB
+    neopixel_sendByte((colormap[i] >> 16) & 0xFF);
+    neopixel_sendByte((colormap[i] >>  8) & 0xFF);
+    neopixel_sendByte((colormap[i] >>  0) & 0xFF);
+    #endif
   }
+  EA = 1; 
 }
 
-// ===================================================================================
-// Clear Single Pixel in Buffer
-// ===================================================================================
-void neopixel_clearPixel(uint8_t pixel) { neopixel_writeColor(pixel, 0, 0, 0); }
+extern __code uint32_t led_map[LAYER_COUNT][LED_COUNT];
+__xdata uint8_t buffer[LED_COUNT * 3];  // pixel buffer
+void neopixel_on_layer_state_change(const fak_layer_state_t state) {
+  memset(buffer, 0, sizeof(buffer));
+
+  for (unsigned int i = 0; i < LAYER_COUNT; i++) {
+    if (is_layer_on(i)) {
+      for (unsigned int j = 0; j < LED_COUNT; j++) {
+        const uint32_t color = led_map[i][j];
+        uint8_t r = (color >> 16) & 0xFF;
+        uint8_t g = (color >>  8) & 0xFF;
+        uint8_t b = (color >>  0) & 0xFF;
+        uint8_t a = (color >> 24) & 0xFF;  // Not used in blending here, but it's available
+
+        // Add the color to the array with additive blending
+        #ifdef NEOPIXEL_GRB
+        buffer[j * 3 + 0] = min(255, buffer[j * 3 + 0] + g);
+        buffer[j * 3 + 1] = min(255, buffer[j * 3 + 1] + r);
+        buffer[j * 3 + 2] = min(255, buffer[j * 3 + 2] + b);
+        #elif  NEOPIXEL_RGB
+        buffer[j * 3 + 0] = min(255, buffer[j * 3 + 0] + r);
+        buffer[j * 3 + 1] = min(255, buffer[j * 3 + 1] + g);
+        buffer[j * 3 + 2] = min(255, buffer[j * 3 + 2] + b);
+        #endif
+      }
+    }
+  }
+  neopixel_update(buffer, sizeof(buffer));
+}
+
+uint32_t rgba_interp(uint32_t src, uint32_t dst, uint32_t t) {
+    const uint32_t s = 255 - t;
+    return (
+        (((((src >> 0)  & 0xff) * s +
+           ((dst >> 0)  & 0xff) * t) >> 8)) |
+        (((((src >> 8)  & 0xff) * s +
+           ((dst >> 8)  & 0xff) * t)     )  & ~0xff) |
+        (((((src >> 16) & 0xff) * s +
+           ((dst >> 16) & 0xff) * t) << 8)  & ~0xffff) |
+        (((((src >> 24) & 0xff) * s +
+           ((dst >> 24) & 0xff) * t) << 16) & ~0xffffff)
+    );
+}

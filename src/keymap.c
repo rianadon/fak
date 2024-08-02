@@ -1,9 +1,12 @@
 #include "keymap.h"
+#include <stddef.h>
 
 #if LAYER_COUNT > 1
 __xdata __at(XADDR_LAYER_STATE) fak_layer_state_t layer_state = 0;
 __xdata __at(XADDR_PERSISTENT_LAYER_STATE) fak_layer_state_t persistent_layer_state = 1;
 #endif
+
+void (*p[4]) (int x, int y);
 
 uint32_t get_real_key_code(uint8_t key_idx) {
 #if LAYER_COUNT == 1
@@ -73,6 +76,10 @@ static void on_layer_state_change() {
         }
     }
 #endif
+
+    for (unsigned int i = 0; layer_hooks[i] != NULL; i++) {
+        layer_hooks[i](layer_state);
+    }
 }
 
 void set_default_layer_idx(uint8_t layer_idx) {

@@ -1,5 +1,5 @@
 let { MAX_LAYER_COUNT, .. } = import "constants.ncl" in
-let { Uint, Uint8, Uint16, BoundedInt, Set, .. } = import "util_types.ncl" in
+let { Uint, Uint8, Uint16, Uint32, BoundedInt, Set, .. } = import "util_types.ncl" in
 let util = import "util_functions.ncl" in
 
 let Uint13 = Uint 13 in
@@ -166,18 +166,11 @@ let Layers =
 in
 
 let LEDs = 
-  let HexColor = fun label value =>
-    let pattern = "^#(?:[0-9a-fA-F]{3}){1,2}$" in
-    if std.string.is_match pattern value then
-      value
-    else
-      let msg = "invalid color" in
-      std.contract.blame_with_message msg label
-  in
+  let Color = Uint32 in
   let ValidLength = std.contract.from_predicate (fun leds =>
     let len = std.array.length leds in len > 0 && len <= MAX_LAYER_COUNT
   ) in 
-  std.contract.Sequence [ Array HexColor, ValidLength ]
+  std.contract.Sequence [ Array (Array Color), ValidLength ]
 in 
 
 let ConditionalLayers = std.contract.from_predicate (fun cl => cl
