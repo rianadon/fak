@@ -8,7 +8,7 @@
 #include "keymap.h"
 #include <string.h>
 
-#define NEOPIN PIN_asm(PIN_NEO) // convert PIN_NEO for inline assembly
+
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
 extern __code uint32_t led_map[LAYER_COUNT][LED_COUNT];
@@ -143,19 +143,3 @@ void neopixel_on_layer_state_change(const fak_layer_state_t state) {
   }
   neopixel_update(led_buffer, sizeof(led_buffer));
 }
-
-/*
-uint32_t rgba_interp(uint32_t src, uint32_t dst, uint32_t t) {
-    const uint32_t s = 255 - t;
-    return (
-        (((((src >> 0)  & 0xff) * s +
-           ((dst >> 0)  & 0xff) * t) >> 8)) |
-        (((((src >> 8)  & 0xff) * s +
-           ((dst >> 8)  & 0xff) * t)     )  & ~0xff) |
-        (((((src >> 16) & 0xff) * s +
-           ((dst >> 16) & 0xff) * t) << 8)  & ~0xffff) |
-        (((((src >> 24) & 0xff) * s +
-           ((dst >> 24) & 0xff) * t) << 16) & ~0xffffff)
-    );
-}
-*/
