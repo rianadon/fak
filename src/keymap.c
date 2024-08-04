@@ -6,8 +6,6 @@ __xdata __at(XADDR_LAYER_STATE) fak_layer_state_t layer_state = 0;
 __xdata __at(XADDR_PERSISTENT_LAYER_STATE) fak_layer_state_t persistent_layer_state = 1;
 #endif
 
-void (*p[4]) (int x, int y);
-
 uint32_t get_real_key_code(uint8_t key_idx) {
 #if LAYER_COUNT == 1
     return key_map[key_idx];

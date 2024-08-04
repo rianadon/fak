@@ -11,6 +11,9 @@
 #define NEOPIN PIN_asm(PIN_NEO) // convert PIN_NEO for inline assembly
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
+extern __code uint32_t led_map[LAYER_COUNT][LED_COUNT];
+__xdata __at(XADDR_LED_BUFFER) uint8_t led_buffer[3 * LED_COUNT];
+
 // ===================================================================================
 // Protocol Delays
 // ===================================================================================
@@ -99,25 +102,22 @@ void neopixel_update(const uint8_t *buffer, const size_t len) {
 }
 
 void neopixel_show_layer(const uint32_t *colormap, const size_t len) {
-  EA = 0;
   for(size_t i = 0; i < len; ++i) {
     #ifdef NEOPIXEL_GRB
-    neopixel_sendByte((colormap[i] >>  8) & 0xFF);
-    neopixel_sendByte((colormap[i] >> 16) & 0xFF);
-    neopixel_sendByte((colormap[i] >>  0) & 0xFF);
+    led_buffer[i * 3 + 0] = (colormap[i] >>  8) & 0xFF;
+    led_buffer[i * 3 + 1] = (colormap[i] >>  0) & 0xFF;
+    led_buffer[i * 3 + 2] = (colormap[i] >> 16) & 0xFF;
     #elif  NEOPIXEL_RGB
-    neopixel_sendByte((colormap[i] >> 16) & 0xFF);
-    neopixel_sendByte((colormap[i] >>  8) & 0xFF);
-    neopixel_sendByte((colormap[i] >>  0) & 0xFF);
+    led_buffer[i * 3 + 0] = (colormap[i] >>  0) & 0xFF;
+    led_buffer[i * 3 + 1] = (colormap[i] >>  8) & 0xFF;
+    led_buffer[i * 3 + 2] = (colormap[i] >> 16) & 0xFF;
     #endif
   }
-  EA = 1; 
+  neopixel_update(led_buffer, sizeof(led_buffer));
 }
 
-extern __code uint32_t led_map[LAYER_COUNT][LED_COUNT];
-__xdata uint8_t buffer[LED_COUNT * 3];  // pixel buffer
 void neopixel_on_layer_state_change(const fak_layer_state_t state) {
-  memset(buffer, 0, sizeof(buffer));
+  memset(led_buffer, 0, sizeof(led_buffer));
 
   for (unsigned int i = 0; i < LAYER_COUNT; i++) {
     if (is_layer_on(i)) {
@@ -130,20 +130,21 @@ void neopixel_on_layer_state_change(const fak_layer_state_t state) {
 
         // Add the color to the array with additive blending
         #ifdef NEOPIXEL_GRB
-        buffer[j * 3 + 0] = min(255, buffer[j * 3 + 0] + g);
-        buffer[j * 3 + 1] = min(255, buffer[j * 3 + 1] + r);
-        buffer[j * 3 + 2] = min(255, buffer[j * 3 + 2] + b);
+        led_buffer[j * 3 + 0] = min(255, led_buffer[j * 3 + 0] + g);
+        led_buffer[j * 3 + 1] = min(255, led_buffer[j * 3 + 1] + r);
+        led_buffer[j * 3 + 2] = min(255, led_buffer[j * 3 + 2] + b);
         #elif  NEOPIXEL_RGB
-        buffer[j * 3 + 0] = min(255, buffer[j * 3 + 0] + r);
-        buffer[j * 3 + 1] = min(255, buffer[j * 3 + 1] + g);
-        buffer[j * 3 + 2] = min(255, buffer[j * 3 + 2] + b);
+        led_buffer[j * 3 + 0] = min(255, led_buffer[j * 3 + 0] + r);
+        led_buffer[j * 3 + 1] = min(255, led_buffer[j * 3 + 1] + g);
+        led_buffer[j * 3 + 2] = min(255, led_buffer[j * 3 + 2] + b);
         #endif
       }
     }
   }
-  neopixel_update(buffer, sizeof(buffer));
+  neopixel_update(led_buffer, sizeof(led_buffer));
 }
 
+/*
 uint32_t rgba_interp(uint32_t src, uint32_t dst, uint32_t t) {
     const uint32_t s = 255 - t;
     return (
@@ -157,3 +158,4 @@ uint32_t rgba_interp(uint32_t src, uint32_t dst, uint32_t t) {
            ((dst >> 24) & 0xff) * t) << 16) & ~0xffffff)
     );
 }
+*/

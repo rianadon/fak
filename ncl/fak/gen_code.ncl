@@ -269,8 +269,7 @@ m%"
     if ir.defines.NEOPIXEL_ENABLE then
       m%"
         // LED test
-        const uint32_t *layer = led_map[get_default_layer_idx()];
-        neopixel_show_layer(layer, LED_COUNT);
+        neopixel_on_layer_state_change(0);
       "%
     else
       ""

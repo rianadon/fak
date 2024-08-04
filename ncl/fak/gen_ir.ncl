@@ -18,6 +18,7 @@ in
 
 # We can assume all encoders in `kb` are used, as preprocessed by `main.ncl`
 let encoder_count = std.array.length kb.encoders in
+let led_count = std.array.length kb.leds in
 
 let physical_key_count = std.array.length kb.keys in
 let virtual_key_count = std.array.length km.virtual_keys in
@@ -404,7 +405,12 @@ in {
 }
 & util.record.only_if _central_defines.REPEAT_KEY_ENABLE {
   REPEAT_KEY = sizeof.uint8_t * 4,
-} in
+}
+& util.record.only_if (led_count > 0) (
+  {
+    LED_BUFFER = sizeof.uint8_t * led_count * 3, # RGB
+  }
+) in
 
 let _xaddr_defines =
   let names = std.record.fields _xaddr_sizes in
