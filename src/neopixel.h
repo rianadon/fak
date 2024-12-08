@@ -7,7 +7,6 @@
 #pragma once
 #include <stdint.h>
 #include <stddef.h>
-#include "keymap.h"
 
 // typedef struct {
 //   sbit pin;
@@ -20,4 +19,4 @@
 void neopixel_sendByte(uint8_t data);
 void neopixel_update(const uint8_t *buffer, const size_t len);
 void neopixel_show_layer(const uint32_t *colormap, const size_t len);
-void neopixel_on_layer_state_change(const fak_layer_state_t state);
+void neopixel_on_layer_state_change(const uint8_t state);

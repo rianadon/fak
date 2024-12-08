@@ -21,7 +21,7 @@ uint32_t get_real_key_code(uint8_t key_idx) {
     do {
         if (!is_layer_on(layer_idx))
             continue;
-        
+
         uint32_t key_code = key_map[layer_idx][key_idx];
 
         // Bail out if this keycode is not a hold-tap (e.g. tap dance)
@@ -76,7 +76,7 @@ static void on_layer_state_change() {
 #endif
 
     for (unsigned int i = 0; layer_hooks[i] != NULL; i++) {
-        layer_hooks[i](layer_state);
+        layer_hooks[i](0);
     }
 }
 
@@ -134,7 +134,7 @@ uint8_t is_layer_off(uint8_t layer_idx) {
 uint8_t get_trans_layer_exit_source_idx(uint8_t key_idx, uint8_t hold) {
     uint32_t mask = hold ? KEY_CODE_HOLD_LAYER_IDX_MODS_MASK : KEY_CODE_TAP_MASK;
     uint32_t code = hold ? KEY_CODE_HOLD_TRANS_LAYER_EXIT : KEY_CODE_TAP_TRANS_LAYER_EXIT;
-    
+
     uint8_t layer_idx = LAYER_COUNT;
 
     while (layer_idx--) {

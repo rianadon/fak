@@ -121,29 +121,6 @@ m%"
   }
 
   %{
-    if ir.defines.NEOPIXEL_ENABLE then
-    m%"
-      #include "neopixel.h"
-      #include "keymap.h"
-      %{
-      if layer_count == 0 then
-        std.fail_with "No layers. There must be at least one."
-      else if layer_count == 1 then
-        "__code uint32_t led_map[LED_COUNT] = %{codegen.val.array (std.array.at 0 ir.led_map)};"
-      else
-        "__code uint32_t led_map[LAYER_COUNT][LED_COUNT] = %{codegen.val.array ir.led_map};"
-      }
-
-      __code void (*layer_hooks[])(const fak_layer_state_t) = {
-        %{ if ir.defines.NEOPIXEL_ENABLE then "neopixel_on_layer_state_change," else "" }
-        NULL
-      };
-    "%
-    else
-      "// (No neopixel defs)"
-  }
-
-  %{
     if std.array.length ir.conditional_layers > 0 then
       m%"
         #include "keymap.h"
@@ -242,6 +219,28 @@ m%"
     |> std.array.map (fun { value, .. } => value.data.pin.data)
     ) "LED"}
   %{codegen.pin_def 0 33 "RELAY"}
+
+  %{
+    if ir.defines.NEOPIXEL_ENABLE then
+    m%"
+      #include "neopixel.h"
+      %{
+      if ir.side == 'peripheral then
+        "// No LED Map for peripheral"
+      else if layer_count == 0 then
+        std.fail_with "No layers. There must be at least one."
+      else
+        "__code uint32_t led_map[LED_LAYER_COUNT][LED_COUNT] = %{codegen.val.array ir.led_map};"
+      }
+
+      __code void (*layer_hooks[])(const uint8_t) = {
+        %{ if ir.defines.NEOPIXEL_ENABLE then "neopixel_on_layer_state_change," else "" }
+        NULL
+      };
+    "%
+    else
+      "// (No neopixel defs)"
+  }
 
   void keyboard_init_user() {
   %{

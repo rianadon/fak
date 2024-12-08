@@ -5,13 +5,16 @@
 
 
 #include "neopixel.h"
-#include "keymap.h"
+#include "ch55x.h"
 #include <string.h>
 
+#ifndef SPLIT_SIDE_PERIPHERAL
+#include "keymap.h"
+#endif
 
 #define min(a,b) ((a) < (b) ? (a) : (b))
 
-extern __code uint32_t led_map[LAYER_COUNT][LED_COUNT];
+extern __code uint32_t led_map[LED_LAYER_COUNT][LED_COUNT];
 __xdata __at(XADDR_LED_BUFFER) uint8_t led_buffer[3 * LED_COUNT];
 
 // ===================================================================================
@@ -116,10 +119,10 @@ void neopixel_show_layer(const uint32_t *colormap, const size_t len) {
   neopixel_update(led_buffer, sizeof(led_buffer));
 }
 
-void neopixel_on_layer_state_change(const fak_layer_state_t state) {
+void neopixel_on_layer_state_change(const uint8_t state) {
+  #ifndef SPLIT_SIDE_PERIPHERAL
   memset(led_buffer, 0, sizeof(led_buffer));
-
-  for (unsigned int i = 0; i < LAYER_COUNT; i++) {
+  for (unsigned int i = 0; i < LED_LAYER_COUNT; i++) {
     if (is_layer_on(i)) {
       for (unsigned int j = 0; j < LED_COUNT; j++) {
         const uint32_t color = led_map[i][j];
@@ -141,5 +144,6 @@ void neopixel_on_layer_state_change(const fak_layer_state_t state) {
       }
     }
   }
+  #endif
   neopixel_update(led_buffer, sizeof(led_buffer));
 }

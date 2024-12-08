@@ -13,7 +13,7 @@ let use_soft_serial = std.record.has_field "SPLIT_SOFT_SERIAL_PIN" ir.defines in
 
 {
   split = ir.defines.SPLIT_ENABLE,
-  extra_sources = as_sources 
+  extra_sources = as_sources
   {
     "src/hold_tap.c" = ir.defines.HOLD_TAP_ENABLE,
     "src/tap_dance.c" = ir.defines.TAP_DANCE_ENABLE,
@@ -28,5 +28,6 @@ let use_soft_serial = std.record.has_field "SPLIT_SOFT_SERIAL_PIN" ir.defines in
   extra_periph_sources = as_sources
   {
     "src/soft_serial.c" = use_soft_serial,
+    "src/neopixel.c" = ir.defines.NEOPIXEL_ENABLE,
   },
 }

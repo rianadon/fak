@@ -245,6 +245,7 @@ in
 let _central_defines = {
   KEY_COUNT = key_count,
   LAYER_COUNT = layer_count,
+  LED_LAYER_COUNT = layer_count,
   DEBOUNCE_MS = kb.debounce_ms,
 
   LAYER_TRANSPARENCY_ENABLE = layer_count > 1 && (std.array.any (fun kc =>
@@ -290,20 +291,6 @@ let _central_defines = {
     |> std.array.any (fun c => c.data.require_prior_idle_ms > 0),
 
   ENCODER_COUNT = encoder_count,
-
-  LED_COUNT = std.array.length kb.leds,
-  NEOPIXEL_ENABLE = kb.leds
-    |> std.array.any (fun led => led.type == 'ws2812b),
-  NEOPIXEL_COUNT  = kb.leds
-    |> std.array.filter (fun led => led.type == 'ws2812b)
-    |> std.array.map (fun led => led.data.num )
-    |> std.array.fold_right (std.number.max) 0,
-  NEOPIXEL_GRB    = true,
-  NEOPIXEL_PIN    = kb.leds
-    |> util.array.enumerate
-    |> std.array.filter (fun { index, value } => value.type == 'ws2812b && value.data.num == 1)
-    |> std.array.first # TODO: allow more than one neopixel string
-    |> (fun { index, .. } => "_LED%{std.to_string index}"),
 
   USB_NUM_INTERFACES = [true, CONSUMER_KEYS_ENABLE, MOUSE_KEYS_ENABLE]
     |> std.array.filter ((==) true)
@@ -451,6 +438,22 @@ let _defines = {
 
   UART0_ALT = std.array.elem "uart01" feature_keys_used,
   UART1_ALT = std.array.elem "uart11" feature_keys_used,
+
+  LED_COUNT = std.array.length kb.leds,
+  NEOPIXEL_ENABLE = kb.leds
+    |> std.array.any (fun led => led.type == 'ws2812b),
+
+  NEOPIXEL_COUNT  = kb.leds
+    |> std.array.filter (fun led => led.type == 'ws2812b)
+    |> std.array.map (fun led => led.data.num )
+    |> std.array.fold_right (std.number.max) 0,
+  NEOPIXEL_GRB    = true,
+  NEOPIXEL_PIN    = kb.leds
+    |> util.array.enumerate
+    |> std.array.filter (fun { index, value } => value.type == 'ws2812b && value.data.num == 1)
+    |> std.array.first # TODO: allow more than one neopixel string
+    |> (fun { index, .. } => "_LED%{std.to_string index}"),
+
 } & util.record.only_if (side != 'self) {
   SPLIT_PERIPH_KEY_COUNT =
     (if side == 'central then kb.split.peripheral else kb).keys
@@ -460,6 +463,9 @@ let _defines = {
     kb.encoders
     |> std.array.filter (fun { type, .. } => type == expected_type)
     |> std.array.length,
+  SPLIT_NEOPIXEL_ENABLE =
+    (if side == 'central then kb.split.peripheral else kb).leds
+    |> std.array.any (fun led => led.type == 'ws2812b),
 } & util.record.only_if (soft_serial_pin >= 0) {
   SPLIT_SOFT_SERIAL_PIN =
     let p = soft_serial_pin in
@@ -467,7 +473,8 @@ let _defines = {
 } & util.record.only_if (side != 'peripheral) (
   _central_defines & _xaddr_defines
 ) & util.record.only_if (side == 'peripheral) {
-  NEOPIXEL_ENABLE = false,
+  LED_LAYER_COUNT = 1,
+  XADDR_LED_BUFFER = 0, # No other addresses need to be allocated
 }
 in
 
@@ -613,7 +620,7 @@ let rec _kscan | Kscan =
 #      }
 #    }),
 
-  led_map = km.leds, # no additional encoding necessary
+  led_map = if side == 'peripheral then [] else km.leds, # no additional encoding necessary
 
   macro_steps = if side =='peripheral then [] else _macro_steps,
   macro_step_args = if side =='peripheral then [] else _macro_step_args,
