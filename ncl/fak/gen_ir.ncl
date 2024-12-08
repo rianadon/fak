@@ -29,7 +29,7 @@ let virtual_key_idx_start = physical_key_count in
 let keycodes = std.array.flatten km.layers in
 let layer_count = std.array.length km.layers in
 
-let keycode_is_hold_tap = fun kc => 
+let keycode_is_hold_tap = fun kc =>
   kc.type == 'hold_tap
   && kc.data.tap.type != 'none
   && kc.data.hold.type != 'none
@@ -51,7 +51,7 @@ let deep_keycodes = std.array.flat_map (fun kc => match {
 } kc.type) keycodes in
 
 let features_used =
-  if side == 'self then [] else 
+  if side == 'self then [] else
     [kb.split.channel]
     |> std.array.filter (fun e => std.is_record e)
 in
@@ -93,7 +93,7 @@ let index_of_macro_steps = fun steps =>
   |> std.array.fold_left (+) 0
 in
 
-let encode_modifiers = fun mods => std.array.reduce_left (+) (std.array.map (fun { field, value } => 
+let encode_modifiers = fun mods => std.array.reduce_left (+) (std.array.map (fun { field, value } =>
   let M = [
     "left_ctrl", "left_shift", "left_alt", "left_gui",
     "right_ctrl", "right_shift", "right_alt", "right_gui",
@@ -105,7 +105,7 @@ let encode_tappable = fun { type, data } => match {
   'none => 0,
   'regular => data.hid_code + util.bit.shift (encode_modifiers data.mods) 8,
   'sticky => 160 + (util.bit.shift (encode_modifiers data.mods) 8) + data.layer,
-  'layer => 
+  'layer =>
     let op = match { 'df => 0, 'tog => 1, 'to => 2 } data.operation in
     192 + data.layer + util.bit.shift op 8,
   'custom =>
@@ -160,7 +160,7 @@ let encode_kc = fun kc => match {
   'tap_dance => encode_tap_dance kc.data,
 } kc.type in
 
-let encode_hold_tap_key_interrupt = fun { decision, trigger_on } => 
+let encode_hold_tap_key_interrupt = fun { decision, trigger_on } =>
   if decision == 'none then 0 else (
     1 + (if decision == 'hold then 2 else 0)
     + (if trigger_on == 'press then 4 else 0)
@@ -188,14 +188,14 @@ in
 
 let is_custom_keys_used =
   deep_keycodes
-  |> std.array.any (fun kc => 
+  |> std.array.any (fun kc =>
       kc.type == 'hold_tap
       && kc.data.tap.type == 'custom)
 in
 
 let is_custom_keys_of_type_used = fun type =>
   deep_keycodes
-  |> std.array.any (fun kc => 
+  |> std.array.any (fun kc =>
       kc.type == 'hold_tap
       && kc.data.tap.type == 'custom
       && kc.data.tap.data.type == type)
@@ -247,12 +247,12 @@ let _central_defines = {
   LAYER_COUNT = layer_count,
   DEBOUNCE_MS = kb.debounce_ms,
 
-  LAYER_TRANSPARENCY_ENABLE = layer_count > 1 && (std.array.any (fun kc => 
+  LAYER_TRANSPARENCY_ENABLE = layer_count > 1 && (std.array.any (fun kc =>
     kc.type == 'hold_tap
     && (kc.data.tap.type == 'transparent || kc.data.hold.type == 'transparent)
   ) deep_keycodes),
 
-  TRANS_LAYER_EXIT_ENABLE = layer_count > 1 && (std.array.any (fun kc => 
+  TRANS_LAYER_EXIT_ENABLE = layer_count > 1 && (std.array.any (fun kc =>
     kc.type == 'hold_tap
     && (kc.data.tap.type == 'transparent_layer_exit || kc.data.hold.type == 'transparent_layer_exit)
   ) deep_keycodes),
@@ -288,13 +288,13 @@ let _central_defines = {
   COMBO_COUNT = combo_count,
   COMBO_REQUIRE_PRIOR_IDLE_MS_ENABLE = combos
     |> std.array.any (fun c => c.data.require_prior_idle_ms > 0),
-  
+
   ENCODER_COUNT = encoder_count,
 
   LED_COUNT = std.array.length kb.leds,
-  NEOPIXEL_ENABLE = kb.leds 
+  NEOPIXEL_ENABLE = kb.leds
     |> std.array.any (fun led => led.type == 'ws2812b),
-  NEOPIXEL_COUNT  = kb.leds 
+  NEOPIXEL_COUNT  = kb.leds
     |> std.array.filter (fun led => led.type == 'ws2812b)
     |> std.array.map (fun led => led.data.num )
     |> std.array.fold_right (std.number.max) 0,
@@ -388,7 +388,7 @@ in {
     fak_combo_key_queue_entry_t = 2 * sizeof.uint8_t,
   } in
   {
-    COMBO_STATES = sizeof.fak_combo_state_t * _central_defines.COMBO_COUNT, 
+    COMBO_STATES = sizeof.fak_combo_state_t * _central_defines.COMBO_COUNT,
     COMBO_KEY_QUEUE = sizeof.uint8_t + (sizeof.fak_combo_key_queue_entry_t * _central_defines.COMBO_KEY_QUEUE_LEN),
   }
 )
@@ -466,7 +466,9 @@ let _defines = {
     "P%{std.to_string (std.number.floor (p / 10))}.%{std.to_string (p % 10)}",
 } & util.record.only_if (side != 'peripheral) (
   _central_defines & _xaddr_defines
-)
+) & util.record.only_if (side == 'peripheral) {
+  NEOPIXEL_ENABLE = false,
+}
 in
 
 let encode_hold_tap_behavior = fun b => {
@@ -502,7 +504,7 @@ let Kscan = std.contract.from_predicate (fun k =>
   (util.array.unique all_used_pins) == all_used_pins
 ) in
 
-let rec _kscan | Kscan = 
+let rec _kscan | Kscan =
   let index_of_in = fun pin => util.array.index_of pin _kscan.ins in
   let index_of_col = fun pin => util.array.index_of pin _kscan.cols in
   let index_of_row = fun pin => util.array.index_of pin _kscan.rows in
@@ -518,8 +520,8 @@ let rec _kscan | Kscan =
     mapping =
       let gen_mapping = fun direction =>
         let force_check = std.array.any (fun k =>
-          k.type == 'matrix 
-          && k.data.col >= 0 
+          k.type == 'matrix
+          && k.data.col >= 0
           && k.data.row >= 0
         ) kb.keys in
 
@@ -547,7 +549,7 @@ let rec _kscan | Kscan =
       {
         col_to_row = gen_mapping 'col_to_row,
         row_to_col = gen_mapping 'row_to_col,
-      } 
+      }
   },
   direct = kb.keys
     |> util.array.enumerate
@@ -571,16 +573,16 @@ let rec _kscan | Kscan =
 
   tap_dance_bindings = if side == 'peripheral then [] else
     std.array.map encode_kc (std.array.flatten _tap_dance_bindings),
-  
+
   combo_defs = if side == 'peripheral then [] else
     std.array.map (fun c => encode_combo
       c.data
       (virtual_key_idx_start + util.array.index_of c km.virtual_keys)
     ) combos,
-  
+
   encoder_defs = kb.encoders
     |> util.array.enumerate
-    |> std.array.map (fun { index, value } => 
+    |> std.array.map (fun { index, value } =>
         let type = value.type in
         let data = value.data in
         let find_key_idx = fun dir =>
@@ -597,20 +599,20 @@ let rec _kscan | Kscan =
           pin_b = data.pin_b,
         }
     ),
-  
+
   led_defs = kb.leds
     |> util.array.enumerate,
 #    |> std.array.map_with_index (fun i led => {
 #      index = i,
 #      value = { # Simply the pin number for now.
-#        pin = match { 
+#        pin = match {
 #          'physical => led.data.pin.data,
 #          'ws2812b => led.data.pin.data,
 #        } led.type,
 #        num = led.data.num,
 #      }
 #    }),
-  
+
   led_map = km.leds, # no additional encoding necessary
 
   macro_steps = if side =='peripheral then [] else _macro_steps,
@@ -627,7 +629,7 @@ let rec _kscan | Kscan =
     })
   ),
 
-  split_periph_key_indices = 
+  split_periph_key_indices =
     if side != 'central then [] else
       kb.keys
       |> util.array.enumerate

@@ -102,6 +102,7 @@ let KeyboardPeripheralSide = {
   keys | Set (PhysicalKey mcu matrix),
   encoders | Set (EncoderDef mcu) | default = [],
   split.channel | SplitChannel mcu,
+  leds | Set (LedDef mcu) | default = [],
 } in
 
 let KeyboardCentralSide = {

@@ -31,7 +31,7 @@ let rec codegen = {
     |> std.array.map codegen_define
     |> std.array.filter (fun s => s != "")
     |> util.array.join "\n",
-  
+
   pin_def = fun i pin prefix =>
     let port = std.to_string (std.number.truncate (pin / 10)) in
     let port_idx = std.to_string (pin % 10) in
@@ -105,7 +105,7 @@ m%"
 
   %{
     if std.array.length ir.encoder_defs > 0 then
-      let defs = std.array.map (fun enc => 
+      let defs = std.array.map (fun enc =>
         {
           resolution = enc.resolution,
           key_idx_cw = enc.key_idx_cw,
@@ -191,7 +191,7 @@ let c_file =
       out_mapping
       |> util.array.enumerate
       |> std.array.filter (fun { index, value } => value >= 0)
-      |> std.array.map (fun { index, value } => 
+      |> std.array.map (fun { index, value } =>
           let pin_idx = std.array.at index ins in
           let key_idx = value in
           key_state_inform key_idx in_prefix pin_idx
@@ -238,9 +238,10 @@ m%"
   }
   %{pin_defs_for (
     ir.led_defs
-    |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1)) # Drop chained Neopixel LEDs 
+    |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1)) # Drop chained Neopixel LEDs
     |> std.array.map (fun { value, .. } => value.data.pin.data)
     ) "LED"}
+  %{codegen.pin_def 0 33 "RELAY"}
 
   void keyboard_init_user() {
   %{
@@ -257,14 +258,17 @@ m%"
   }
   // LEDs
   %{
-    let prefix = "LED" in 
+    let prefix = "LED" in
     ir.led_defs
-    # Drop chained Neopixel LEDs 
+    # Drop chained Neopixel LEDs
     |> std.array.filter (fun { value, ..} => !(value.type == 'ws2812b && value.data.num > 1))
     |> std.array.map_with_index (fun i { value, .. } => [set_pin_mode 0 prefix i, set_pin false prefix i])
     |> std.array.flatten
     |> util.array.join "\n"
   }
+  %{set_pin_mode 0 "RELAY" 0}
+  %{set_pin false "RELAY" 0}
+
   %{
     if ir.defines.NEOPIXEL_ENABLE then
       m%"
